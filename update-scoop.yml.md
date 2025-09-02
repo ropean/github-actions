@@ -39,6 +39,7 @@ jobs:
   update-scoop:
     uses: your-username/my-github-actions/.github/workflows/update-scoop.yml@main
     with:
+      tag: ${{ github.event.release.tag_name }}
       app_name: 'myhosts'
       exe_name: 'MyHosts.exe'
       scoop_bucket_repo: 'ropean/scoop-ropean'
@@ -61,6 +62,7 @@ jobs:
   update-scoop:
     uses: your-username/my-github-actions/.github/workflows/update-scoop.yml@main
     with:
+      tag: ${{ github.event.release.tag_name }}
       app_name: 'myhosts'
       exe_name: 'MyHosts.exe'
       scoop_bucket_repo: 'ropean/scoop-ropean'
@@ -81,6 +83,7 @@ jobs:
 
 | Input                | Description                 | Example                                                   |
 | -------------------- | --------------------------- | --------------------------------------------------------- |
+| `tag`                | Release tag (starts with v) | `v1.2.3`                                                  |
 | `app_name`           | Name of the application     | `myhosts`                                                 |
 | `exe_name`           | Name of the executable file | `MyHosts.exe`                                             |
 | `scoop_bucket_repo`  | Scoop bucket repository     | `ropean/scoop-ropean`                                     |
@@ -98,10 +101,6 @@ jobs:
 | `shortcut_name`        | Shortcut display name                  | `app_name` | `MyHosts`                                            |
 | `shortcut_description` | Shortcut description                   | Empty      | `Edit hosts file`                                    |
 | `notes`                | Additional notes for the package       | Empty      | `Run as administrator for system hosts file editing` |
-
-## Authentication
-
-This action uses the default `GITHUB_TOKEN` provided by GitHub Actions, so no additional secrets are required.
 
 ## How It Works
 
@@ -159,15 +158,19 @@ scoop install myhosts@1.2.3
 ## Setup Requirements
 
 1. **Scoop Bucket Repository**: You need a Scoop bucket repository (e.g., `ropean/scoop-ropean`)
-2. **Repository Permissions**: Ensure the `SCOOP_BUCKET_TOKEN` has write access to your bucket repository
+2. **Deploy Key**:
+   - Generate an SSH key pair for the deploy key
+   - Add the public key as a deploy key in your bucket repository settings
+   - Add the private key as `SCOOP_ROPEAN_DEPLOY_KEY` secret in your repository
 3. **Release Assets**: Ensure your releases include the executable file with the exact name specified in `exe_name`
+4. **Tag Format**: Release tags must start with `v` (e.g., `v1.2.3`)
 
 ## Troubleshooting
 
 ### Common Issues
 
 1. **Asset Not Found**: Ensure the executable file name in your release matches the `exe_name` parameter exactly
-2. **Permission Denied**: Verify the `SCOOP_BUCKET_TOKEN` has write access to the bucket repository
+2. **Permission Denied**: Verify the deploy key has write access to the bucket repository and the SSH key is correctly configured
 3. **No Changes**: The action will skip if the manifest hasn't changed (same version/hash)
 
 ### Debug Information

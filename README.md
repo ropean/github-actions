@@ -30,6 +30,7 @@ jobs:
   update-scoop:
     uses: your-username/my-github-actions/.github/workflows/update-scoop.yml@main
     with:
+      tag: ${{ github.event.release.tag_name }}
       app_name: 'myhosts'
       exe_name: 'MyHosts.exe'
       scoop_bucket_repo: 'ropean/scoop-ropean'

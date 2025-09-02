@@ -3,6 +3,10 @@ name: Update Scoop Bucket
 on:
   workflow_call:
     inputs:
+      tag:
+        description: 'Release tag (required, starts with v)'
+        required: true
+        type: string
       app_name:
         description: 'Name of the application (e.g., myhosts)'
         required: true
@@ -60,10 +64,10 @@ jobs:
   update-scoop:
     runs-on: ubuntu-latest
     steps:
-      - name: Extract version from release
+      - name: Extract version from tag
         id: get_version
         run: |
-          VERSION="${{ github.event.release.tag_name }}"
+          VERSION="${{ inputs.tag }}"
           VERSION_NUMBER="${VERSION#v}"
           echo "VERSION_NUMBER=$VERSION_NUMBER" >> $GITHUB_OUTPUT
           echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
@@ -71,7 +75,7 @@ jobs:
       - name: Download release asset
         run: |
           # Find the correct asset URL for the executable
-          ASSET_URL=$(curl -s "https://api.github.com/repos/${{ inputs.source_repo }}/releases/tags/${{ github.event.release.tag_name }}" | \
+          ASSET_URL=$(curl -s "https://api.github.com/repos/${{ inputs.source_repo }}/releases/tags/${{ inputs.tag }}" | \
             jq -r '.assets[] | select(.name == "${{ inputs.exe_name }}") | .browser_download_url')
 
           if [ "$ASSET_URL" = "null" ] || [ -z "$ASSET_URL" ]; then
@@ -88,11 +92,16 @@ jobs:
           HASH=$(sha256sum "${{ inputs.exe_name }}" | cut -d' ' -f1)
           echo "HASH=$HASH" >> $GITHUB_OUTPUT
 
+      - name: Setup SSH
+        uses: webfactory/ssh-agent@v0.7.0
+        with:
+          ssh-private-key: ${{ secrets.SCOOP_ROPEAN_DEPLOY_KEY }}
+
       - name: Checkout scoop bucket
         uses: actions/checkout@v4
         with:
           repository: ${{ inputs.scoop_bucket_repo }}
-          token: ${{ secrets.SCOOP_BUCKET_TOKEN }}
+          ssh-url: true
 
       - name: Configure Git
         run: |
