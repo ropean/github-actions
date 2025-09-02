@@ -75,7 +75,7 @@ jobs:
       - name: Download release asset
         run: |
           # Find the correct asset URL for the executable
-          ASSET_URL=$(curl -s "https://api.github.com/repos/${{ inputs.source_repo }}/releases/tags/${{ inputs.tag }}" | \
+          ASSET_URL=$(curl -s "https://api.github.com/repos/${{ inputs.source_repo }}/releases/tags/${{ inputs.tag }}/${{ inputs.exe_name }}" | \
             jq -r '.assets[] | select(.name == "${{ inputs.exe_name }}") | .browser_download_url')
 
           if [ "$ASSET_URL" = "null" ] || [ -z "$ASSET_URL" ]; then
