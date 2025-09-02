@@ -30,10 +30,13 @@ A reusable GitHub Action that automatically updates Scoop bucket manifests when 
 ### Basic Usage
 
 ```yaml
-name: Release
+name: Update MyHosts in Scoop Bucket
+
 on:
-  release:
-    types: [published]
+  workflow_run:
+    workflows: ['Build and Release']
+    types:
+      - completed
 
 jobs:
   update-scoop:
@@ -48,6 +51,8 @@ jobs:
       homepage: 'https://github.com/username/repo-name'
       license_identifier: 'MIT'
       license_url: 'https://github.com/username/repo-name/blob/main/LICENSE'
+    secrets:
+      SCOOP_ROPEAN_DEPLOY_KEY: ${{ secrets.SCOOP_ROPEAN_DEPLOY_KEY }}
 ```
 
 ### Advanced Usage with Optional Parameters
@@ -75,6 +80,8 @@ jobs:
       shortcut_name: 'MyHosts' # Optional: shortcut display name
       shortcut_description: 'Edit hosts file' # Optional: shortcut description
       notes: 'Run as administrator for system hosts file editing' # Optional: additional notes
+    secrets:
+      SCOOP_ROPEAN_DEPLOY_KEY: ${{ secrets.SCOOP_ROPEAN_DEPLOY_KEY }}
 ```
 
 ## Inputs
@@ -157,13 +164,55 @@ scoop install myhosts@1.2.3
 
 ## Setup Requirements
 
+### Option 1: Workflow in Target Repository (Recommended)
+
+**Move the workflow file to your Scoop bucket repository** (e.g., `ropean/scoop-ropean`):
+
+1. **Copy the workflow file** to `.github/workflows/` in your Scoop bucket repository
+2. **No deploy key needed** - uses `GITHUB_TOKEN` automatically
+3. **Simpler setup** - no secret management required
+4. **More secure** - no long-lived SSH keys to manage
+
+**Usage when workflow is in the target repository:**
+
+```yaml
+# In your source repository (e.g., ropean/MyHosts)
+name: Release
+on:
+  release:
+    types: [published]
+
+jobs:
+  update-scoop:
+    uses: ropean/scoop-ropean/.github/workflows/update-scoop.yml@main
+    with:
+      tag: ${{ github.event.release.tag_name }}
+      app_name: 'myhosts'
+      exe_name: 'MyHosts.exe'
+      scoop_bucket_repo: 'ropean/scoop-ropean'
+      source_repo: 'ropean/MyHosts'
+      description: 'A simple hosts file editor'
+      homepage: 'https://github.com/ropean/MyHosts'
+      license_identifier: 'MIT'
+      license_url: 'https://github.com/ropean/MyHosts/blob/main/LICENSE'
+    # No secrets section needed!
+```
+
+### Option 2: Workflow in Separate Repository
+
+**Keep the workflow in a separate repository** (current setup):
+
 1. **Scoop Bucket Repository**: You need a Scoop bucket repository (e.g., `ropean/scoop-ropean`)
 2. **Deploy Key**:
    - Generate an SSH key pair for the deploy key
    - Add the public key as a deploy key in your bucket repository settings
-   - Add the private key as `SCOOP_ROPEAN_DEPLOY_KEY` secret in your repository
-3. **Release Assets**: Ensure your releases include the executable file with the exact name specified in `exe_name`
-4. **Tag Format**: Release tags must start with `v` (e.g., `v1.2.3`)
+   - Add the private key as `SCOOP_ROPEAN_DEPLOY_KEY` secret in your calling repository
+3. **Pass secrets** in your workflow call (see usage examples above)
+
+### Common Requirements
+
+- **Release Assets**: Ensure your releases include the executable file with the exact name specified in `exe_name`
+- **Tag Format**: Release tags must start with `v` (e.g., `v1.2.3`)
 
 ## Troubleshooting
 

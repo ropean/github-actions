@@ -21,10 +21,13 @@ A reusable GitHub Action that automatically updates Scoop bucket manifests when 
 #### Quick Usage
 
 ```yaml
-name: Release
+name: Update MyHosts in Scoop Bucket
+
 on:
-  release:
-    types: [published]
+  workflow_run:
+    workflows: ['Build and Release']
+    types:
+      - completed
 
 jobs:
   update-scoop:
@@ -39,6 +42,8 @@ jobs:
       homepage: 'https://github.com/username/repo-name'
       license_identifier: 'MIT'
       license_url: 'https://github.com/username/repo-name/blob/main/LICENSE'
+    secrets:
+      SCOOP_ROPEAN_DEPLOY_KEY: ${{ secrets.SCOOP_ROPEAN_DEPLOY_KEY }}
 ```
 
 For detailed documentation, see [update-scoop.yml.md](update-scoop.yml.md).
