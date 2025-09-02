@@ -38,8 +38,6 @@ jobs:
       homepage: 'https://github.com/username/repo-name'
       license_identifier: 'MIT'
       license_url: 'https://github.com/username/repo-name/blob/main/LICENSE'
-    secrets:
-      SCOOP_BUCKET_TOKEN: ${{ secrets.SCOOP_BUCKET_TOKEN }}
 ```
 
 For detailed documentation, see [update-scoop.yml.md](update-scoop.yml.md).

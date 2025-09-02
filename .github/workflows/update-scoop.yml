@@ -55,10 +55,6 @@ on:
         required: false
         type: string
         default: ''
-    secrets:
-      SCOOP_BUCKET_TOKEN:
-        description: 'GitHub token with access to the scoop bucket repository'
-        required: true
 
 jobs:
   update-scoop:

@@ -47,8 +47,6 @@ jobs:
       homepage: 'https://github.com/username/repo-name'
       license_identifier: 'MIT'
       license_url: 'https://github.com/username/repo-name/blob/main/LICENSE'
-    secrets:
-      SCOOP_BUCKET_TOKEN: ${{ secrets.SCOOP_BUCKET_TOKEN }}
 ```
 
 ### Advanced Usage with Optional Parameters
@@ -75,8 +73,6 @@ jobs:
       shortcut_name: 'MyHosts' # Optional: shortcut display name
       shortcut_description: 'Edit hosts file' # Optional: shortcut description
       notes: 'Run as administrator for system hosts file editing' # Optional: additional notes
-    secrets:
-      SCOOP_BUCKET_TOKEN: ${{ secrets.SCOOP_BUCKET_TOKEN }}
 ```
 
 ## Inputs
@@ -103,11 +99,9 @@ jobs:
 | `shortcut_description` | Shortcut description                   | Empty      | `Edit hosts file`                                    |
 | `notes`                | Additional notes for the package       | Empty      | `Run as administrator for system hosts file editing` |
 
-## Secrets
+## Authentication
 
-| Secret               | Description                                             | Required |
-| -------------------- | ------------------------------------------------------- | -------- |
-| `SCOOP_BUCKET_TOKEN` | GitHub token with access to the scoop bucket repository | Yes      |
+This action uses the default `GITHUB_TOKEN` provided by GitHub Actions, so no additional secrets are required.
 
 ## How It Works
 
@@ -165,9 +159,8 @@ scoop install myhosts@1.2.3
 ## Setup Requirements
 
 1. **Scoop Bucket Repository**: You need a Scoop bucket repository (e.g., `ropean/scoop-ropean`)
-2. **GitHub Token**: Create a personal access token with write access to your bucket repository
-3. **Repository Secret**: Add the token as `SCOOP_BUCKET_TOKEN` in your repository secrets
-4. **Release Assets**: Ensure your releases include the executable file with the exact name specified in `exe_name`
+2. **Repository Permissions**: Ensure the `SCOOP_BUCKET_TOKEN` has write access to your bucket repository
+3. **Release Assets**: Ensure your releases include the executable file with the exact name specified in `exe_name`
 
 ## Troubleshooting
 
