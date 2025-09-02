@@ -76,7 +76,7 @@ jobs:
         run: |
           # Find the correct asset URL for the executable 
           # https://github.com/ropean/MyHosts/releases/download/0.3.3/MyHosts.exe
-          ASSET_URL="https://github.com/ropean/${{ inputs.source_repo }}/releases/download/${{ VERSION_NUMBER }}/${{ inputs.exe_name }}"
+          ASSET_URL="https://github.com/ropean/${{ inputs.source_repo }}/releases/download/${{ steps.get_version.outputs.VERSION_NUMBER }}/${{ inputs.exe_name }}"
           curl -L -o "${{ inputs.exe_name }}" "$ASSET_URL"
           echo "DOWNLOAD_URL=$ASSET_URL" >> $GITHUB_ENV
 
