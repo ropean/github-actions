@@ -1,0 +1,209 @@
+name: Update Scoop Bucket
+
+on:
+  workflow_call:
+    inputs:
+      app_name:
+        description: 'Name of the application (e.g., myhosts)'
+        required: true
+        type: string
+      exe_name:
+        description: 'Name of the executable file (e.g., MyHosts.exe)'
+        required: true
+        type: string
+      scoop_bucket_repo:
+        description: 'Scoop bucket repository (e.g., ropean/scoop-ropean)'
+        required: true
+        type: string
+      source_repo:
+        description: 'Source repository (e.g., username/repo-name)'
+        required: true
+        type: string
+      description:
+        description: 'App description'
+        required: true
+        type: string
+      homepage:
+        description: 'Homepage URL'
+        required: true
+        type: string
+      license_identifier:
+        description: 'License identifier (e.g., MIT)'
+        required: true
+        type: string
+      license_url:
+        description: 'License URL'
+        required: true
+        type: string
+      bin_name:
+        description: 'Binary name (usually same as exe_name)'
+        required: false
+        type: string
+        default: ''
+      shortcut_name:
+        description: 'Shortcut display name'
+        required: false
+        type: string
+        default: ''
+      shortcut_description:
+        description: 'Shortcut description'
+        required: false
+        type: string
+        default: ''
+      notes:
+        description: 'Additional notes for the package'
+        required: false
+        type: string
+        default: ''
+    secrets:
+      SCOOP_BUCKET_TOKEN:
+        description: 'GitHub token with access to the scoop bucket repository'
+        required: true
+
+jobs:
+  update-scoop:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Extract version from release
+        id: get_version
+        run: |
+          VERSION="${{ github.event.release.tag_name }}"
+          VERSION_NUMBER="${VERSION#v}"
+          echo "VERSION_NUMBER=$VERSION_NUMBER" >> $GITHUB_OUTPUT
+          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Download release asset
+        run: |
+          # Find the correct asset URL for the executable
+          ASSET_URL=$(curl -s "https://api.github.com/repos/${{ inputs.source_repo }}/releases/tags/${{ github.event.release.tag_name }}" | \
+            jq -r '.assets[] | select(.name == "${{ inputs.exe_name }}") | .browser_download_url')
+
+          if [ "$ASSET_URL" = "null" ] || [ -z "$ASSET_URL" ]; then
+            echo "Error: Could not find asset ${{ inputs.exe_name }}"
+            exit 1
+          fi
+
+          curl -L -o "${{ inputs.exe_name }}" "$ASSET_URL"
+          echo "DOWNLOAD_URL=$ASSET_URL" >> $GITHUB_ENV
+
+      - name: Calculate hash
+        id: get_hash
+        run: |
+          HASH=$(sha256sum "${{ inputs.exe_name }}" | cut -d' ' -f1)
+          echo "HASH=$HASH" >> $GITHUB_OUTPUT
+
+      - name: Checkout scoop bucket
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ inputs.scoop_bucket_repo }}
+          token: ${{ secrets.SCOOP_BUCKET_TOKEN }}
+
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Set default values
+        id: defaults
+        run: |
+          BIN_NAME="${{ inputs.bin_name }}"
+          if [ -z "$BIN_NAME" ]; then
+            BIN_NAME="${{ inputs.exe_name }}"
+          fi
+          echo "BIN_NAME=$BIN_NAME" >> $GITHUB_OUTPUT
+
+          SHORTCUT_NAME="${{ inputs.shortcut_name }}"
+          if [ -z "$SHORTCUT_NAME" ]; then
+            SHORTCUT_NAME="${{ inputs.app_name }}"
+          fi
+          echo "SHORTCUT_NAME=$SHORTCUT_NAME" >> $GITHUB_OUTPUT
+
+      - name: Create/Update manifest files
+        run: |
+          VERSION="${{ steps.get_version.outputs.VERSION_NUMBER }}"
+          HASH="${{ steps.get_hash.outputs.HASH }}"
+
+          # Create the JSON manifest
+          cat > manifest.json << EOF
+          {
+            "version": "$VERSION",
+            "description": "${{ inputs.description }}",
+            "homepage": "${{ inputs.homepage }}",
+            "license": { 
+              "identifier": "${{ inputs.license_identifier }}", 
+              "url": "${{ inputs.license_url }}" 
+            },
+            "url": "$DOWNLOAD_URL",
+            "hash": "$HASH",
+            "bin": "${{ steps.defaults.outputs.BIN_NAME }}",
+            "checkver": {
+              "github": "${{ inputs.source_repo }}"
+            },
+            "autoupdate": {
+              "url": "https://github.com/${{ inputs.source_repo }}/releases/download/v\$version/${{ inputs.exe_name }}"
+            }
+          EOF
+
+          # Add shortcuts if provided
+          if [ -n "${{ inputs.shortcut_name }}" ] && [ -n "${{ inputs.shortcut_description }}" ]; then
+            cat > temp.json << EOF
+          {
+            "version": "$VERSION",
+            "description": "${{ inputs.description }}",
+            "homepage": "${{ inputs.homepage }}",
+            "license": { 
+              "identifier": "${{ inputs.license_identifier }}", 
+              "url": "${{ inputs.license_url }}" 
+            },
+            "url": "$DOWNLOAD_URL",
+            "hash": "$HASH",
+            "bin": "${{ steps.defaults.outputs.BIN_NAME }}",
+            "checkver": {
+              "github": "${{ inputs.source_repo }}"
+            },
+            "autoupdate": {
+              "url": "https://github.com/${{ inputs.source_repo }}/releases/download/v\$version/${{ inputs.exe_name }}"
+            },
+            "shortcuts": [["${{ inputs.exe_name }}", "${{ steps.defaults.outputs.SHORTCUT_NAME }}", "${{ inputs.shortcut_description }}"]]
+          EOF
+            mv temp.json manifest.json
+          fi
+
+          # Add notes if provided
+          if [ -n "${{ inputs.notes }}" ]; then
+            jq --arg notes "${{ inputs.notes }}" '. + {"notes": $notes}' manifest.json > temp.json
+            mv temp.json manifest.json
+          fi
+
+          # Format JSON properly
+          jq . manifest.json > bucket/${{ inputs.app_name }}.json
+
+          # Create versioned manifest (keep all versions)
+          cp bucket/${{ inputs.app_name }}.json bucket/${{ inputs.app_name }}@$VERSION.json
+
+          echo "Created/Updated:"
+          echo "- bucket/${{ inputs.app_name }}.json (latest)"
+          echo "- bucket/${{ inputs.app_name }}@$VERSION.json (versioned)"
+
+      - name: Commit and push changes
+        run: |
+          VERSION="${{ steps.get_version.outputs.VERSION_NUMBER }}"
+
+          git add bucket/${{ inputs.app_name }}.json
+          git add bucket/${{ inputs.app_name }}@$VERSION.json
+
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "Update ${{ inputs.app_name }} to version $VERSION
+
+            - Latest: bucket/${{ inputs.app_name }}.json
+            - Versioned: bucket/${{ inputs.app_name }}@$VERSION.json
+            - Download URL: $DOWNLOAD_URL
+            - SHA256: ${{ steps.get_hash.outputs.HASH }}
+            
+            Auto-generated by GitHub Actions from ${{ inputs.source_repo }}"
+            
+            git push origin main
+            echo "Successfully updated ${{ inputs.app_name }} to version $VERSION"
+          fi
