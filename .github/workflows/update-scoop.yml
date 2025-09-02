@@ -74,15 +74,9 @@ jobs:
 
       - name: Download release asset
         run: |
-          # Find the correct asset URL for the executable
-          ASSET_URL=$(curl -s "https://api.github.com/repos/${{ inputs.source_repo }}/releases/tags/${{ inputs.tag }}/${{ inputs.exe_name }}" | \
-            jq -r '.assets[] | select(.name == "${{ inputs.exe_name }}") | .browser_download_url')
-
-          if [ "$ASSET_URL" = "null" ] || [ -z "$ASSET_URL" ]; then
-            echo "Error: Could not find asset ${{ inputs.exe_name }}"
-            exit 1
-          fi
-
+          # Find the correct asset URL for the executable 
+          # https://github.com/ropean/MyHosts/releases/download/0.3.3/MyHosts.exe
+          ASSET_URL="https://github.com/ropean/${{ inputs.source_repo }}/releases/download/${{ VERSION_NUMBER }}/${{ inputs.exe_name }}"
           curl -L -o "${{ inputs.exe_name }}" "$ASSET_URL"
           echo "DOWNLOAD_URL=$ASSET_URL" >> $GITHUB_ENV
 
