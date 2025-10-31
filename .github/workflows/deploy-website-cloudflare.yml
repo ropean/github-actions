@@ -71,11 +71,11 @@ jobs:
         id: project
         run: |
           if [[ "${{ steps.env.outputs.environment }}" == "ci"* ]] || [[ "${{ steps.env.outputs.environment }}" == "ci" ]]; then
-            echo "project=inline-assets-ci" >> $GITHUB_OUTPUT
-            echo "domain=inline-assets-ci.ropean.org" >> $GITHUB_OUTPUT
+            echo "project=2048-ci" >> $GITHUB_OUTPUT
+            echo "domain=2048-ci.aceapp.dev" >> $GITHUB_OUTPUT
           else
-            echo "project=inline-assets" >> $GITHUB_OUTPUT
-            echo "domain=inline-assets.ropean.org" >> $GITHUB_OUTPUT
+            echo "project=2048" >> $GITHUB_OUTPUT
+            echo "domain=2048.aceapp.dev" >> $GITHUB_OUTPUT
           fi
 
       - name: Deploy to Cloudflare Pages
@@ -83,7 +83,7 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy ./website/dist --project-name=${{ steps.project.outputs.project }} --branch main
+          command: pages deploy ./dist --project-name=${{ steps.project.outputs.project }} --branch ${{ github.ref_name }}
 
       - name: Deployment summary
         run: |
@@ -92,5 +92,6 @@ jobs:
 
           - 🚀 Deployment completed!
           - 🔧 Environment: ${{ steps.env.outputs.environment }}
+          - 🌿 Branch: ${{ github.ref_name }}
           - 🌐 Domain: https://${{ steps.project.outputs.domain }}
           EOF
