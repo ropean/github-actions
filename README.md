@@ -1,4 +1,4 @@
-# my-github-actions
+# Github Actions
 
 A collection of reusable GitHub Actions for automating common development workflows.
 
