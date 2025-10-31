@@ -1,0 +1,100 @@
+name: Deploy Backend via SSH
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - "backend"
+      - "backend*"
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Install dependencies
+        run: |
+          pnpm install --filter image-converter-server --no-frozen-lockfile
+
+      - name: Build backend
+        run: |
+          cd server
+          pnpm run build
+
+      - name: Deploy to Server via SSH
+        uses: appleboy/scp-action@v1
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT || 22 }}
+          source: "server/dist/*"
+          target: ${{ secrets.DEPLOY_PATH }}
+          strip_components: 2
+          rm: false
+          overwrite: true
+
+      - name: Install dependencies and restart application
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT || 22 }}
+          script: |
+            export PATH=$PATH:/home/deployer/.nvm/versions/node/v24.11.0/bin
+            cd ${{ secrets.DEPLOY_PATH }}
+            # Install production dependencies on target server (includes native modules compilation)
+            pnpm install --prod
+            # Restart PM2 application with updated environment
+            pm2 restart ecosystem.config.cjs --update-env
+            pm2 save
+
+      - name: Deployment Summary
+        shell: bash
+        run: |
+          VERSION=$(jq -r '.version' server/package.json)
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+          cat >> $GITHUB_STEP_SUMMARY << EOF
+          ## 🎉 Deployment Completed Successfully!
+
+          ### 📦 Deployment Information
+
+          | Item | Details |
+          |------|---------|
+          | **Version** | v$VERSION |
+          | **Environment** | Production |
+          | **Server** | ${{ secrets.SSH_HOST }} |
+          | **Deploy Path** | ${{ secrets.DEPLOY_PATH }} |
+          | **Deploy Time** | $(date -u +'%Y-%m-%d %H:%M:%S UTC') |
+
+          ### ✅ Actions Completed
+
+          - ✓ Updated package.json version
+          - ✓ Built backend application
+          - ✓ Deployed files to server
+          - ✓ Installed production dependencies
+          - ✓ Restarted PM2 application
+          - ✓ Committed version changes to main
+
+          ---
+
+          > 🚀 Deployment pipeline executed successfully!
+          EOF

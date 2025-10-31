@@ -1,0 +1,76 @@
+name: Deploy Frontend to FTP
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - 'frontend'
+      - 'frontend*'
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Install dependencies
+        run: |
+          pnpm install --filter image-converter-client --no-frozen-lockfile
+
+      - name: Build frontend
+        run: |
+          cd client && pnpm run build
+
+      - name: Deploy to FTP
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_SERVER_FRONTEND }}
+          username: ${{ secrets.FTP_USERNAME_FRONTEND }}
+          password: ${{ secrets.FTP_PASSWORD_FRONTEND }}
+          local-dir: ./client/dist/
+          server-dir: /
+          dangerous-clean-slate: false
+
+      - name: Deployment Summary
+        if: always()
+        shell: bash
+        run: |
+          cat >> $GITHUB_STEP_SUMMARY << 'EOF'
+          ## 🎉 Frontend Deployment Summary
+
+          ### 📦 Deployment Information
+
+          | Item | Details |
+          |------|---------|
+          | **Environment** | Production |
+          | **Server** | ${{ secrets.FTP_SERVER_FRONTEND }} |
+          | **Deploy Path** | / |
+          | **Trigger** | ${{ github.event_name }} |
+          | **Branch** | ${{ github.ref_name }} |
+          | **Commit** | `${{ github.sha }}` |
+          | **Deploy Time** | $(date -u +'%Y-%m-%d %H:%M:%S UTC') |
+
+          ### ✅ Actions Completed
+
+          - ✓ Checked out code
+          - ✓ Setup Node.js (v22) and pnpm (v10)
+          - ✓ Installed dependencies
+          - ✓ Built frontend application
+          - ✓ Deployed to FTP server
+
+          ---
+
+          > 🚀 Frontend deployment completed successfully!
+          EOF
