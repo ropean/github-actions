@@ -4,8 +4,8 @@ on:
   workflow_dispatch:
   push:
     branches:
-      - "backend"
-      - "backend*"
+      - 'backend'
+      - 'backend*'
 
 permissions:
   contents: write
@@ -21,7 +21,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
-          node-version: "22"
+          node-version: '22'
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
@@ -44,7 +44,7 @@ jobs:
           username: ${{ secrets.SSH_USERNAME }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: ${{ secrets.SSH_PORT || 22 }}
-          source: "server/dist/*"
+          source: 'server/dist/*'
           target: ${{ secrets.DEPLOY_PATH }}
           strip_components: 2
           rm: false
